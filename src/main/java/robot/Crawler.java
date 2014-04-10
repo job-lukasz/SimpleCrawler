@@ -14,18 +14,18 @@ import java.util.TreeMap;
 public class Crawler {
 
 	private String source;
-	private Set<String> linkSet;
+	private Set<String> linksSet;
 	private Map<String, Integer> wordsMap;
 	private int iteration;
-	
+
 	public Crawler(String source) {
 		super();
 		this.source = source;
-		this.linkSet = new LinkedHashSet<String>();
-		linkSet.add(source);
+		this.linksSet = new LinkedHashSet<String>();
+		linksSet.add(source);
 		this.wordsMap = new TreeMap<String, Integer>();
 	}
-	
+
 	private String getSite(String link) throws MalformedURLException,
 			IOException {
 		String source = "";
@@ -34,62 +34,66 @@ public class Crawler {
 				akt.openStream(), "utf-8"));
 		String linia;
 		while ((linia = in.readLine()) != null) {
-			source += linia + "\n";
+			source += linia+"\n";
 		}
 		in.close();
 		return source;
 	}
 
-	private void getText(String site) {
-		String text[] = site.split("<p>");
+	private void getWords(String site) {
+		String text[] = site.split("<[^/?].*>");//rozdzielenie po <jakis znacznik i atrybuty> ale nie </
 		String rawText = "";
 		for (int i = 0; i < text.length; i++) {
-			String temp[] = text[i].split("</p>");
+			String temp[] = text[i].split("</.*>");
 			rawText += temp[0];
 		}
-		String[] words = rawText.split(" ");
+		String[] words = rawText.split("\\s+"); // rozdzielenie po białych znakach
 		for (String rawWord : words) {
-			String word= rawWord.replaceAll("[^\\p{L}\\p{Nd}]", "");
+			String word = rawWord.replaceAll("[^\\p{L}]", ""); // zamiania wszystkich znaków nie bedacych literami
 			word = word.toLowerCase();
-			if (word.compareTo("")!=0 && wordsMap.containsKey(word)) {
-				wordsMap.put(word, wordsMap.get(word) + 1);
-			} else {
-				wordsMap.put(word, 1);
+			if (word.compareTo("") != 0) {
+				if (wordsMap.containsKey(word)) {
+					wordsMap.put(word, wordsMap.get(word) + 1);
+				} else {
+					wordsMap.put(word, 1);
+				}
 			}
 		}
 	}
 
 	private String[] getLinks(String site) {
-		String links[] = site.split("href=\"");
+		String links[] = site.split("<a.* href=\"");
 		for (int i = 1; i < links.length; i++) {
 			links[i] = links[i].split("\"")[0];
-			links[i] = getSource(links[i]);
-			if (linkSet.add(links[i])) {
+			links[i] = getLinkSource(links[i]);
+			if (linksSet.add(links[i])) {
 				System.out.println("dodano link: " + links[i]);
 			}
 		}
 		return links;
 	}
 
-	private String getSource(String link) {
+	private String getLinkSource(String link) {
 		if (link.startsWith("http://")) {
 			return link;
+		} else if (link.matches(".*(.html|.php|.htm).*")) {
+			if (source.endsWith("/")) {
+				return source + link;
+			} else {
+				return source + "/" + link;
+			}
 		}
-		if (source.endsWith("/")) {
-			return source + link;
-		} else {
-			return source + "/" + link;
-		}
+		return "";
 	}
-	
-	public void nextIteration(){
-		if(iteration<linkSet.size()){
+
+	public void goToNextSite() {
+		if (iteration < linksSet.size()) {
 			try {
-				String link = (String) linkSet.toArray()[iteration];
+				String link = (String) linksSet.toArray()[iteration];
 				System.out.println("Przechodzę na stronę: " + link);
 				String site = getSite(link);
 				getLinks(site);
-				getText(site);
+				getWords(site);
 			} catch (MalformedURLException ex) {
 				System.out.println("nirozpoznany typ odnosnika");
 			} catch (IOException ex) {
@@ -98,15 +102,13 @@ public class Crawler {
 			iteration++;
 		}
 	}
-	
-	public void showWordSet(){
+
+	public void printWordSet() {
 		Set<String> words1 = wordsMap.keySet();
 		Iterator<String> word = words1.iterator();
 		while (word.hasNext()) {
 			String tmp = word.next();
-			if(wordsMap.get(tmp)>30){
-				System.out.println(tmp + ": " + wordsMap.get(tmp));				
-			}
+			System.out.println(tmp + ": " + wordsMap.get(tmp));
 		}
 	}
 }
