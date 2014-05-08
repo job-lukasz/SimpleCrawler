@@ -19,11 +19,10 @@ public class Crawler {
 	private int iteration;
 
 	public Crawler(String source) {
-		super();
 		this.source = source;
 		this.linksSet = new LinkedHashSet<String>();
-		linksSet.add(source);
 		this.wordsMap = new TreeMap<String, Integer>();
+		linksSet.add(source);
 	}
 
 	private String getSite(String link) throws MalformedURLException,
